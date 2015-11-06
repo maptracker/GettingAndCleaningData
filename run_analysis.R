@@ -28,6 +28,10 @@
     nullChar <- vector("character")
     nullList <- list()
 
+    if (!require("dplyr")) {
+        stop("This script requires dplyr to run. You can install it with install.packages('dplyr')")
+    }
+
 ### *** Functions *** ###
     
     run <- function() {
@@ -35,30 +39,41 @@
 
         ## Find the columns that we want (mean / standard deviation)
         feats <- parseFeatures()
+        tidy <- buildTidyFiles( feats )
+        tidy
         feats
     }
 
     parseFeatures <- function() {
         ## Find the raw columns that we are interested in
-        featuresDotTxt <- file.path(dataDir, "features.txt")
+        file <- file.path(dataDir, "features.txt")
         
-        if (!file.exists(featuresDotTxt)) {
-            stop(paste("Failed to find features file:", featuresDotTxt))
+        if (!file.exists(file)) {
+            stop(paste("Failed to find features file:", file))
         }
 
         ## We will build the code book as we find the columns we want:
-        codeBook <- file.path(dataDir, "CodeBook.md")
+        codeBook <- "CodeBook.md"
         ## I have boilerplate for the "top" of the code book:
-        codeIntro <- file.path(dataDir, "CodeBookIntroOnly.md")
+        codeIntro <- "CodeBookIntroOnly.md"
         if (file.size( codeIntro )) {
-            # Initiate the code book with the intro
+            ## Initiate the code book with the intro
             file.copy( from = codeIntro, to = codeBook )
         } else {
             message(paste("Did not locate code book intro: ", codeIntro))
         }
         cbCon <- file( codeBook, open = "a" )
-        rv <- vector("list")
-        feat <- read.table(featuresDotTxt,
+
+        ## This structure will hold information about the columns we
+        ## wish to extract:
+        rv <- data.frame( col   = vector("integer"),
+                         type   = vector("character"),
+                         metric = nullChar,
+                         full   = nullChar,
+                         original = nullChar,
+                         desc     = nullChar,
+                         stringsAsFactors = FALSE)
+        feat <- read.table(file,
                            colClasses = c("integer", "character"))
         for (i in seq_len(nrow(feat))) {
             ## Parse the metric name
@@ -80,10 +95,99 @@
             writeLines( sprintf("1. **%s** - %s", info$full, info$desc), cbCon)
 
             ## Extend our return value with this column information:
-            rv <- c(rv, info)
+            rv <- rbind(rv, info)
         }
+        message(sprintf("%d columns captured from %s", nrow(rv), file))
         close(cbCon)
+        message(sprintf("Code Book written to %s", codeBook))
         rv
+    }
+
+    activityLookup <- function() {
+        ## Generate a code-to-text lookup for activities
+        ## Read the file into a data frame
+        file <- file.path(dataDir, "activity_labels.txt")
+        if (!file.exists(file)) {
+            stop(paste("Failed to find activity label file:", file))
+        }
+        acts  <- read.table(file, colClasses = c("integer", "character"))
+        ## Set up the return value, which will be a character vector
+        nActs <- nrow(acts)
+        actNames <- vector(mode = "character", length = nActs)
+        for (i in seq_len(nActs)) {
+            ## So the file is already sorted, but to be safe we will
+            ## explicitly read the code integer and use it directly
+            actNames[ acts[[1]][i] ] <- acts[[2]][ i ]
+        }
+        numNames <- length(actNames)
+        message(sprintf("%d activities read from %s", numNames, file))
+        
+        function (index) {
+            if (is.integer(index) & index > 0 & index <= numNames) {
+                return(actNames[ index ])
+            }
+            message(sprintf("Unrecognized activity index '%s'", index))
+            return("UNKNOWN")
+        }
+    }
+
+    buildTidyFiles <- function( feats ) {
+        ## Get the activity lookup
+        actLU <- activityLookup()
+        fooDebug <<- actLU
+        myFrames <- list()
+        for (arm in trainOrTest) {
+            ## Make sure we have the expected directory!
+            armDir <- file.path(dataDir, arm);
+            if (!dir.exists(armDir)) {
+                stop(sprintf("Failed to find %s directory at %s", arm, armDir))
+            }
+
+
+            ## Get the subject IDs
+            subFile <- sprintf("%s/subject_%s.txt", armDir, arm)
+            if (!file.size(subFile)) {
+                stop(sprintf("Failed to find subject file at %s", subFile))
+            }
+            subCol <- read.table(subFile, colClasses = c("factor"))
+
+            ## Get the activities
+            actFile <- sprintf("%s/y_%s.txt", armDir, arm)
+            if (!file.size(actFile)) {
+                stop(sprintf("Failed to find activity file at %s", actFile))
+            }
+            actCol  <- read.table(actFile, colClasses = c("integer"))
+            actNames <- sapply( actCol[[ 1 ]], actLU )
+
+            ## Create a data frame for this arm of the study:
+            thisArm <- data.frame( SubjectID = subCol[[ 1 ]],
+                                  Activity = actNames,
+                                  DataSet = rep(arm, length(actNames)))
+
+            ## Now, read the core of the data
+            dataFile <- sprintf("%s/X_%s.txt", armDir, arm)
+            if (!file.size(dataFile)) {
+                stop(sprintf("Failed to find main data file at %s", dataFile))
+            }
+            rawData <- read.table(dataFile)
+
+            ## We will use feats to pull out the columns we want
+            ## We will chose the columns by their index number using dplyr
+            wantedData <- select(rawData, feats$col)
+            ## Now assign our "nice" names to the columns
+            names(wantedData) <- feats$full
+
+            ## And finally we want to merge these columns in with what
+            ## we alreaddy have in the data frame
+            thisArm <- cbind(thisArm, wantedData)
+            ## Store this data.frame under the arm name in myFrames:
+            myFrames[[ arm ]] <- thisArm
+            message(sprintf("%d rows read from %s", nrow(thisArm), arm))
+        }
+
+        fullData <- rbind( myFrames$test, myFrames$train )
+        str(fullData)
+        actLU
     }
 
     parseFeatureName <- function( fname ) {
@@ -108,8 +212,8 @@
             }
         }
         ## Return the nice name, its type, and the original column name
-        list( metric = nice, type = type, original = fname,
-             full = paste(nice, type, sep = '-'))
+        data.frame( metric = nice, type = type, original = fname,
+             full = paste(nice, type, sep = '-'), stringsAsFactors = FALSE)
     }
 
 ### *** Run the code, return final value *** ###
