@@ -7,13 +7,13 @@ are available from:
 https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Dataset.zip
 
 The scripts used to process them may be found on
-[GitHub][https://github.com/maptracker/GettingAndCleaningData].
+[GitHub](https://github.com/maptracker/GettingAndCleaningData).
 
 #### Important! ####
 
-If you are viewing [CodeBookIntroOnly.md][./CodeBookIntroOnly.md],
+If you are viewing [CodeBookIntroOnly.md](./CodeBookIntroOnly.md),
 that file represents only the human-generated part of the code
-book. The full code book may be found in [CodeBook.md][./CodeBook.md],
+book. The full code book may be found in [CodeBook.md](./CodeBook.md),
 which additionally includes script-generated descriptions for many of
 the variables.
 
@@ -41,13 +41,20 @@ desired data.
 Data held within the `Inertial Signals` subdirectories were not used;
 These represent semi-raw data from the accelerometer and gyroscope.
 
+### Tidy Files ###
+
+Two tidy files were created.
+
 ### Variables Used ###
 
 1. **SubjectID** - Factor, an integer 1-30, representing the thirty
    individuals participating in the study
-1. **DataSet** - Factor, one of "train" or "test", representing the
-   data set the information was taken from.
 1. **Activity** - Factor, one of "WALKING", "WALKING_UPSTAIRS",
    "WALKING_DOWNSTAIRS", "SITTING", "STANDING", "LAYING" representing
    the category of activity being performed by the subject when the
    data were captured.
+1. **DataSet** - Factor, one of "train" or "test", representing the
+   data set the information was taken from. This column will only be
+   present in the initial aggregation of the train and test sets
+
+The following columns are represent the measurements 
