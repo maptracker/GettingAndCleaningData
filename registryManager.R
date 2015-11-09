@@ -15,7 +15,7 @@
 
 library(digest)
 
-createFileRegistry <- function( algo = "sha256", path = "FileRegistry.md" ) {
+createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
 
     regFile  <- path
     params   <- list( Started = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),

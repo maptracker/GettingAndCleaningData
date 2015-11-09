@@ -11,7 +11,7 @@ regman$addFile( "benchmarkDigest.R", "Script for generating hashing benchmarks f
 
 ## Set some parameters:
 regman$param("Experiment Rational", "Compare speeds of hashing algorithms in digest()")
-regman$param("Conclusion", "While SHA-256 is slower than the other algorithms, it is only margnially so, and provides increased collision resistance compared to MD5")
+regman$param("Conclusion", "While SHA-1 is slower than the other algorithms, it is only margnially so, and provides increased collision resistance compared to MD5")
 
 ## Set the introduction block:
 regman$setIntro("Benchmarking using microbenchmark() to compare the relative speeds of the available algorithms in digest(). Comparison is being run to choose a default algorithm for registryManager.")

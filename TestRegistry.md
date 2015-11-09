@@ -13,17 +13,17 @@ a default algorithm for registryManager.
 
 ## Parameters ##
 
-* **Started** : 2015-11-09 15:23:10
-* **HashAlgorithm** : sha256
+* **Started** : 2015-11-09 15:41:47
+* **HashAlgorithm** : sha1
 * **Experiment Rational** : Compare speeds of hashing algorithms in digest()
-* **Conclusion** : While SHA-256 is slower than the other algorithms, it is only margnially so, and provides increased collision resistance compared to MD5
-* **Finished** : 2015-11-09 15:23:10
+* **Conclusion** : While SHA-1 is slower than the other algorithms, it is only margnially so, and provides increased collision resistance compared to MD5
+* **Finished** : 2015-11-09 15:41:47
 
 ## Files ##
 
 1. [HashFunctionBenchmarks.png](./HashFunctionBenchmarks.png)<br>
    **22.803 kb** *Plot of benchmarks, PNG*<br>
-   `e55a7b0d33666b7c0664fb0489bac153cc578fc88fd69a3997a7561e2ec6bfde`
+   `d044c47e386499ffbecdedeb57379d3e2c86ad06`
 1. [benchmarkDigest.R](./benchmarkDigest.R)<br>
    **2.931 kb** *Script for generating hashing benchmarks from the digest() function*<br>
-   `39cb555a079da190dd93c5d891bf295ec9c6f15c0c22c128fa73a2190aca8e35`
+   `321439262948049ea3c887dcfe443d0230522a2d`
