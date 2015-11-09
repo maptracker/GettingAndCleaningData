@@ -1,9 +1,17 @@
 ### This script is designed to help automate tracking of "important
 ### files" used during an R session
 
-# Usage:
-# source("registryManager.R")
-# regman <- createFileRegistry()
+## Usage:
+##   source("registryManager.R")
+##   regman <- createFileRegistry( path = "TestRegistry.md")
+##   regman$addFile( "HashFunctionBenchmarks.png", "Plot of benchmarks, PNG")
+##   ## Should gripe and not do anything:
+##   regman$addFile( "HashFunctionBenchmarks.png", "My benchmarks")
+##   regman$addFile( "benchmarkDigest.R", "Script for generating hashing benchmarks from the digest() function")
+##   regman$param("Experiment Rational", "Compare speeds of hashing algorithms in digest()")
+##   regman$param("Conclusion", "While SHA-256 is slower than the other algorithms, it is only margnially so, and provides increased collision resistance compared to MD5")
+##   regman$setIntro("Benchmarking using microbenchmark() to compare the relative speeds of the available algorithms in digest(). Comparison is being run to choose a default algorithm for registryManager.")
+##   regman$writeRegistry()
 
 library(digest)
 
@@ -63,7 +71,7 @@ createFileRegistry <- function( algo = "sha256", path = "FileRegistry.md" ) {
         ## Write top boilerplate
         intro <- c("# File Registry #\n",
                    "This document records one or more files.",
-                   "Each `file path` is listed with the **size in kilobytes**,",
+                   "Each [file path](#) is listed with the **size in kilobytes**,",
                    "a *user supplied description*,",
                    "and the `hexadecimal hash digest` of the file.")
         
@@ -92,14 +100,15 @@ createFileRegistry <- function( algo = "sha256", path = "FileRegistry.md" ) {
             numFiles <- nrow( registry )
             writeLines(text = "\n## Files ##\n", con = fh)
             for (i in seq_len(numFiles)) {
-                writeLines(text = sprintf("1. `%s/%s`", registry$dir[i],
-                                          registry$file[i]), con = fh)
-                writeLines(text = sprintf("   **%.3f kb** *%s*`",
-                                          registry$size[i]/1000,
-                                          registry$desc[i]),
+                ## Get the row representing this entry:
+                entry <- registry[i, ]
+                writeLines(text = sprintf("1. [%s](%s/%s)<br>",
+                                          entry$file,entry$dir,
+                                          entry$file), con = fh)
+                writeLines(text = sprintf("   **%.3f kb** *%s*<br>",
+                                          entry$size/1000, entry$desc),
                            con = fh)
-                writeLines(text = sprintf("   `%s`", registry$hash[i]),
-                           con = fh)
+                writeLines(text = sprintf("   `%s`", entry$hash), con = fh)
 
             }
         }
