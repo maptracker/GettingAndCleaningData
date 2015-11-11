@@ -32,6 +32,20 @@
         stop("This script requires dplyr to run. You can install it with install.packages('dplyr')")
     }
 
+    ## I have been working on R code to automatically create a file
+    ## registry. This is part of an Reproducible Research initiative
+    ## at work. The regMan object below will help construct a MarkDown
+    ## file that lists all relevant files.
+
+    source("registryManager.R")
+    regMan <- createFileRegistry( )
+    regMan$setIntro("This registry describes both the input and output files used for the Coursera 'Getting and Cleaning Data' course.")
+    regMan$param("CourseraURL", "https://class.coursera.org/getdata-034/human_grading/view/courses/975118/assessments/3/submissions")
+    regMan$param("CourseraTitle", "Getting and Cleaning Data")
+    regMan$param("CourseraDate", "November 2015")
+    regMan$addFile( file = "run_analysis.R",
+                   desc = "The R script used to process input into output")
+    
 ### *** Functions *** ###
     
     run <- function() {
@@ -39,19 +53,27 @@
 
         ## Find the columns that we want (mean / standard deviation)
         feats <- parseFeatures()
-        tidy <- buildTidyFiles( feats )
-        tidy
-        feats
+        ## Read in all the data we want
+        data  <- readRawData( feats )
+        ## Generate tidy files from the data
+        tidy  <- buildTidyFiles( data )
+        ## Generate the file registry:
+        regFile <- regMan$writeRegistry()
+        data
+        # tidy
     }
 
     parseFeatures <- function() {
         ## Find the raw columns that we are interested in
-        file <- file.path(dataDir, "features.txt")
+        file <- "features.txt"
+        path <- file.path(dataDir, file)
         
-        if (!file.exists(file)) {
-            stop(paste("Failed to find features file:", file))
+        if (!file.exists(path)) {
+            stop(paste("Failed to find features file:", path))
         }
-
+        regMan$addFile( file = file, dir = dataDir,
+                       desc = "Input data: Column headers for raw data files")
+        
         ## We will build the code book as we find the columns we want:
         codeBook <- "CodeBook.md"
         ## I have boilerplate for the "top" of the code book:
@@ -59,7 +81,9 @@
         if (file.size( codeIntro )) {
             ## Initiate the code book with the intro
             file.copy( from = codeIntro, to = codeBook )
-        } else {
+            regMan$addFile( file = codeIntro,
+                           desc = "Output template: Hand-written 'intro' for the 'top' of the Code Book")
+       } else {
             message(paste("Did not locate code book intro: ", codeIntro))
         }
         cbCon <- file( codeBook, open = "a" )
@@ -73,7 +97,7 @@
                          original = nullChar,
                          desc     = nullChar,
                          stringsAsFactors = FALSE)
-        feat <- read.table(file,
+        feat <- read.table(path,
                            colClasses = c("integer", "character"))
         for (i in seq_len(nrow(feat))) {
             ## Parse the metric name
@@ -97,20 +121,27 @@
             ## Extend our return value with this column information:
             rv <- rbind(rv, info)
         }
-        message(sprintf("%d columns captured from %s", nrow(rv), file))
         close(cbCon)
-        message(sprintf("Code Book written to %s", codeBook))
+        regMan$addFile( file = codeBook,
+                       desc = "Output: Code Book describing data sets, with manually written introduction and auto-generated column listing")
+
+        message(sprintf("%d columns captured from %s", nrow(rv), path))
+        message(sprintf("  Code Book written to %s", codeBook))
         rv
     }
 
     activityLookup <- function() {
         ## Generate a code-to-text lookup for activities
         ## Read the file into a data frame
-        file <- file.path(dataDir, "activity_labels.txt")
-        if (!file.exists(file)) {
-            stop(paste("Failed to find activity label file:", file))
+        file <- "activity_labels.txt"
+        path <- file.path(dataDir, file)
+        if (!file.exists(path)) {
+            stop(paste("Failed to find activity label file:", path))
         }
-        acts  <- read.table(file, colClasses = c("integer", "character"))
+        regMan$addFile( file = file, dir = dataDir,
+                       desc = "Input data: Activity factors, relating integer ID to human-readable name")
+        
+        acts  <- read.table(path, colClasses = c("integer", "character"))
         ## Set up the return value, which will be a character vector
         nActs <- nrow(acts)
         actNames <- vector(mode = "character", length = nActs)
@@ -120,60 +151,102 @@
             actNames[ acts[[1]][i] ] <- acts[[2]][ i ]
         }
         numNames <- length(actNames)
-        message(sprintf("%d activities read from %s", numNames, file))
-        
+        message(sprintf("%d activities read from %s", numNames, path))
+
+        ## Returned value is a function that takes an index and
+        ## returns the appropriate activity string:
         function (index) {
             if (is.integer(index) & index > 0 & index <= numNames) {
+                ## Yay, found it
                 return(actNames[ index ])
             }
+            ## Boo, unrecognized index. Could stop() here, I suppose.
             message(sprintf("Unrecognized activity index '%s'", index))
             return("UNKNOWN")
         }
     }
 
-    buildTidyFiles <- function( feats ) {
+    buildTidyFiles <- function( data ) {
+        full     <- "fullTidyData.tsv"
+        fullPath <- file.path(full)
+        write.table(data, file = fullPath, sep = "\t", row.names = FALSE)
+        regMan$addFile( file = full,
+                       desc = "Output: Full tidy data file, including all rows from test and train sets, with selected mean and std columns")
+
+        bySubAct <- group_by(data, SubjectID, Activity)
+        
+        
+        mf       <- "meanTidyData.tsv"
+        meanPath <- file.path(mf)
+        
+        list(full = fullPath,
+             mean = meanPath)
+        
+    }
+    
+    readRawData <- function( feats ) {
         ## Get the activity lookup
         actLU <- activityLookup()
         fooDebug <<- actLU
         myFrames <- list()
+
+        message("Reading and merging kinematic data...")
         for (arm in trainOrTest) {
+            ## Cycle through the two arms
+            
             ## Make sure we have the expected directory!
             armDir <- file.path(dataDir, arm);
+            armDirRel <- paste(dataDir, arm, sep="/") # Relative path
             if (!dir.exists(armDir)) {
                 stop(sprintf("Failed to find %s directory at %s", arm, armDir))
             }
+            
 
 
             ## Get the subject IDs
-            subFile <- sprintf("%s/subject_%s.txt", armDir, arm)
+            subArm  <- sprintf("subject_%s.txt", arm)
+            subFile <- file.path(armDir, subArm)
             if (!file.size(subFile)) {
                 stop(sprintf("Failed to find subject file at %s", subFile))
             }
             subCol <- read.table(subFile, colClasses = c("factor"))
+            regMan$addFile( file = subArm, dir = armDirRel,
+                           desc = paste("Input data: Subject IDs for the",arm,
+                                        "data arm"))
 
             ## Get the activities
-            actFile <- sprintf("%s/y_%s.txt", armDir, arm)
+            actArm  <- sprintf("y_%s.txt", arm)
+            actFile <- file.path(armDir, actArm)
             if (!file.size(actFile)) {
                 stop(sprintf("Failed to find activity file at %s", actFile))
             }
             actCol  <- read.table(actFile, colClasses = c("integer"))
+            ## Map the activity IDs to names using our look-up:
             actNames <- sapply( actCol[[ 1 ]], actLU )
+            regMan$addFile( file = actArm, dir = armDirRel,
+                           desc = paste("Input data: Activity IDs for the",arm,
+                                        "data arm"))
 
-            ## Create a data frame for this arm of the study:
+            ## Create a data frame for this arm of the study
+            ## DataSet is just the arm for all rows
             thisArm <- data.frame( SubjectID = subCol[[ 1 ]],
                                   Activity = actNames,
                                   DataSet = rep(arm, length(actNames)))
 
             ## Now, read the core of the data
-            dataFile <- sprintf("%s/X_%s.txt", armDir, arm)
+            dataArm  <- sprintf("X_%s.txt", arm)
+            dataFile <- file.path(armDir, dataArm)
             if (!file.size(dataFile)) {
                 stop(sprintf("Failed to find main data file at %s", dataFile))
             }
             rawData <- read.table(dataFile)
-
+            regMan$addFile( file = dataArm, dir = armDirRel,
+                           desc = paste("Input data: Primary raw data from the",arm,
+                                        "data arm"))
+            
             ## We will use feats to pull out the columns we want
-            ## We will chose the columns by their index number using dplyr
-            wantedData <- select(rawData, feats$col)
+            ## We will chose the columns by their index number
+            wantedData <- rawData[,  feats$col ]
             ## Now assign our "nice" names to the columns
             names(wantedData) <- feats$full
 
@@ -182,12 +255,14 @@
             thisArm <- cbind(thisArm, wantedData)
             ## Store this data.frame under the arm name in myFrames:
             myFrames[[ arm ]] <- thisArm
-            message(sprintf("%d rows read from %s", nrow(thisArm), arm))
+            message(sprintf("  %d rows read from %s", nrow(thisArm), arm))
         }
 
         fullData <- rbind( myFrames$test, myFrames$train )
+        message("Full data.frame generated : ")
         str(fullData)
-        actLU
+        # Return the DF:
+        fullData
     }
 
     parseFeatureName <- function( fname ) {
@@ -204,16 +279,21 @@
         ## If the type is not something we want, return an empty list
         if (! type %in% desiredParameters ) return( nullList )
 
+        nameSep <- '_'
+        ## NOTE: Using dash (-) as a separator seems to cause problems
+        ## with dplyr, because when using "naked" column names it is
+        ## treated as a subtraction operator.
+        
         plen <- length(parts)
         if (plen > 2) {
             ## If we have more than two "parts", stick the remainder onto nice
             for (i in seq(from = 3, to = plen)) {
-                nice <- paste(nice, parts[[i]], sep = '-')
+                nice <- paste(nice, parts[[i]], sep = nameSep)
             }
         }
         ## Return the nice name, its type, and the original column name
         data.frame( metric = nice, type = type, original = fname,
-             full = paste(nice, type, sep = '-'), stringsAsFactors = FALSE)
+             full = paste(nice, type, sep = nameSep), stringsAsFactors = FALSE)
     }
 
 ### *** Run the code, return final value *** ###

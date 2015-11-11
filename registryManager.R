@@ -15,12 +15,17 @@
 
 library(digest)
 
+## I am not convinced that I am packaging this up properly. I had some
+## weird errors where re-running the script failed to add files to the
+## registry because they had already been added. This implies that I
+## am mangling scope somewhere. Lexical scoping is bizzare.
+
 createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
 
     regFile  <- path
     params   <- list( Started = format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
                      HashAlgorithm = algo )
-    registry <- NULL
+    registry  <- NULL
     introText <- NULL
     naChar    <- as.character(NA)
     nferr     <- "As-yet unverified data parsed from registry file"
@@ -61,6 +66,7 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
             if (row$path %in% registry$path) {
                 ## This file is already registered
                 message(paste("File already added to registry:", path))
+                str(registry$path)
             } else {
                 registry <<- rbind( registry, row )
             }
@@ -71,6 +77,10 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
     getIntro <- function() introText
 
     registryList <- function() registry
+
+    numFiles <- function() {
+        if (is.null(registry)) { 0 } else { nrow(registry) }
+    }
 
     param <- function( tag = NA, val = NA ) {
         if (is.na(tag)) {
@@ -90,7 +100,14 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
                    "This document records one or more files.",
                    "Each [file path](#) is listed with the **size in kilobytes**,",
                    "a *user supplied description*,",
-                   "and the `hexadecimal hash digest` of the file.")
+                   "and the `hexadecimal hash digest` of the file.",
+                   "The registry could be validated against current files with:",
+                   "", "```R", 'source("registryManager.R")',
+                   sprintf("regMan <- createFileRegistry( path = '%s' )", regFile),
+                   "regLines <- regMan$readRegistry()",
+                   "failed <- regMan$verifyRegistry()",
+                   "```"
+                   )
         
         writeLines(text = intro, con = fh)
 
@@ -131,6 +148,7 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
         }
         message(paste("File registry written to:", regFile))
         close(fh)
+        regFile
     }
 
     .parenRE <- function(RegExp, text) {
@@ -257,7 +275,7 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
             algo <<- foundAlg
             message(paste("  Hash algorithm set to", foundAlg))
         }
-        message("  Done. Parsed", nrow(registry),"files in registry")
+        message(paste("  Done. Parsed", nrow(registry),"files from registry"))
         ## Return the parsed lines, because why not.
         lines
     }
@@ -308,12 +326,13 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
         failed
     }
     
-    list( addFile = addFile,
-         registryList = registryList,
-         param = param,
-         setIntro = setIntro,
-         getIntro = getIntro,
-         writeRegistry = writeRegistry,
-         readRegistry = readRegistry,
+    list(addFile        = addFile,
+         registryList   = registryList,
+         numFiles       = numFiles,
+         param          = param,
+         setIntro       = setIntro,
+         getIntro       = getIntro,
+         writeRegistry  = writeRegistry,
+         readRegistry   = readRegistry,
          verifyRegistry = verifyRegistry)
 }

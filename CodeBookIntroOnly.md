@@ -43,7 +43,10 @@ These represent semi-raw data from the accelerometer and gyroscope.
 
 ### Tidy Files ###
 
-Two tidy files were created.
+Two tidy files were created. `fullTidyData.tsv` represents all
+observations taken from the selected columns. `meanTidyData.tsv` are
+grouped by **SubjectID** and **Activity**, with the mean value being
+represented.
 
 ### Variables Used ###
 
@@ -55,6 +58,18 @@ Two tidy files were created.
    data were captured.
 1. **DataSet** - Factor, one of "train" or "test", representing the
    data set the information was taken from. This column will only be
-   present in the initial aggregation of the train and test sets
+   present in the initial aggregation of the train and test sets. This
+   column is not present in `meanTidyData.tsv`.
+1. **Count** - Integer, number of observations represented in the
+   row. This column is only found in `meanTidyData.tsv`, and
+   represents the count of averaged observations for that row's
+   **SubjectID**/**Activity** pair.
 
-The following columns are represent the measurements 
+The following columns are represent the measurements extracted from
+the `X_<test|train>.txt` files. For `fullTidyData.tsv` the values will
+be taken directly from the files. For `meanTidyData.tsv`, the values
+are means of all observations for the indicated
+**SubjectID**/**Activity** pair.
+
+These data are unitless, having been normalized to between -1 and 1 by
+the original researchers.
