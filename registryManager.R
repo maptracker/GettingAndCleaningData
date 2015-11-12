@@ -66,7 +66,6 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
             if (row$path %in% registry$path) {
                 ## This file is already registered
                 message(paste("File already added to registry:", path))
-                str(registry$path)
             } else {
                 registry <<- rbind( registry, row )
             }
@@ -190,76 +189,12 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
                 ## We have just entered a new block
                 message(paste("  Parsing Block:", m))
                 if (m == "Registry Description") {
-                    ## The description is just a (line wrapped) single
-                    ## string. Read it in.
                     introText <<- NULL
-                    lineHandler <- function(line) {
-                        if (is.null(introText)) {
-                            ## First line of text in the block
-                            setIntro( line )
-                        } else {
-                            ## Extend the line
-                            setIntro( paste(introText, line ))
-                        }
-                    }
+                    lineHandler <- .LineHandlerIntro
                 } else if (m == "Parameters") {
-                    ## Parse out the key/val pairs for the parameters
-                    lineHandler <- function(line) {
-                        if (!any(is.na(kv <- .parenRE('^\\* \\*\\*(.+?)\\*\\* : (.+)$', line)))) {
-                            ## Set the parameter pair
-                            param(tag = kv[1], val = kv[2])
-                        } else {
-                            message(paste("    Unexpected line in parameter block:", line))
-                        }
-                    }
-
+                    lineHandler <- .LineHandlerParams
                 } else if (m == "Files") {
-                    ## Ok, this is why we have a registry in the first place
-                    ## Parse out the files and their metadata
-                    lineHandler <- function(line) {
-                        if (!any(is.na(dirFile <- .parenRE('^1\\. \\[.+\\]\\((.+)\\/([^\\)]+?)\\)<br>\\s*$', line)))) {
-                            ## We have encountered a new file entry
-                            row  <- .newRow(file  = dirFile[2],
-                                            dir   = dirFile[1],
-                                            error = nferr)
-                            .addRegistryRow( row )
-                        } else {
-                            if (is.null(registry)) {
-                                stop(paste("    ERROR! Encounted a Files line before registry is set up!", line))
-                            }
-                            priorRow = nrow(registry)
-                            if (!any(is.na(hash <- .parenRE('^\\s+`(.+)`\\s*$', line)))) {
-                                ## We have found a hash row
-                                if (is.na(registry$hash[priorRow])) {
-                                    ## Good, the slot is still NA
-                                    registry$hash[priorRow] <<- hash
-                                } else {
-                                    str(registry[[priorRow]])
-                                    stop(paste("    ERROR! Attempt to reset hash value in Files block!", line))
-                                }
-                            } else if (!any(is.na(szDesc <- .parenRE('^\\s+\\*\\*\\s*([0-9\\.]+)\\s*kb\\*\\*\\s+\\*(.+)\\*<br>\\s*$', line)))) {
-                                ## We have found a size/description row
-                                
-                                if (is.na(registry$size[priorRow])) {
-                                    ## Good, the slot is still NA
-                                    registry$size[priorRow] <<- as.double(szDesc[1]) * 1000
-                                } else {
-                                    str(registry[[priorRow]])
-                                    stop(paste("    ERROR! Attempt to reset file size in Files block!", line))
-                                }
-                                if (is.na(registry$desc[priorRow])) {
-                                    ## Good, the slot is still NA
-                                    registry$desc[priorRow] <<-szDesc[2]
-                                } else {
-                                    str(registry[[priorRow]])
-                                    stop(paste("    ERROR! Attempt to reset description in Files block!", line))
-                                }
-                            } else {
-                                message(paste("    Unexpected line in files block:", line))
-                            }
-                        }
-                    }
-
+                    lineHandler <- .LineHandlerFiles
                 } else {
                     message("    Unrecognized block! No code available!")
                     lineHandler <- function( line ) {
@@ -279,52 +214,136 @@ createFileRegistry <- function( algo = "sha1", path = "FileRegistry.md" ) {
         ## Return the parsed lines, because why not.
         lines
     }
+    
+    .LineHandlerIntro <- function (line) {
+        ## Parser for the Registry Description block
+        ## The description is just a (line wrapped) single
+        ## string. Read it in.
+        if (is.null(introText)) {
+            ## First line of text in the block
+            setIntro( line )
+        } else {
+            ## Extend the line
+            setIntro( paste(introText, line ))
+        }
+    }
+    
+    .LineHandlerParams <- function (line) {
+        ## RegExp parser for the Parameters block
+        ## Parse out the key/val pairs for the parameters
+        if (!any(is.na(kv <- .parenRE('^\\* \\*\\*(.+?)\\*\\* : (.+)$', line)))) {
+            ## Set the parameter pair
+            param(tag = kv[1], val = kv[2])
+        } else {
+            message(paste("    Unexpected line in parameter block:", line))
+        }
+    }
+    
+
+    .LineHandlerFiles <- function (line) {
+        ## RegExp parser for the Files block
+        ## This is why we have a registry in the first place
+        ## Parse out the files and their metadata
+        if (!any(is.na(dirFile <- .parenRE('^1\\. \\[.+\\]\\((.+)\\/([^\\)]+?)\\)<br>\\s*$', line)))) {
+            ## We have encountered a new file entry
+            row  <- .newRow(file  = dirFile[2],
+                            dir   = dirFile[1],
+                            error = nferr)
+            .addRegistryRow( row )
+        } else {
+            if (is.null(registry)) {
+                stop(paste("    ERROR! Encounted a Files line before registry is set up!", line))
+            }
+            priorRow = nrow(registry)
+            if (!any(is.na(hash <- .parenRE('^\\s+`(.+)`\\s*$', line)))) {
+                ## We have found a hash row
+                if (is.na(registry$hash[priorRow])) {
+                    ## Good, the slot is still NA
+                    registry$hash[priorRow] <<- hash
+                } else {
+                    str(registry[[priorRow]])
+                    stop(paste("    ERROR! Attempt to reset hash value in Files block!", line))
+                }
+            } else if (!any(is.na(szDesc <- .parenRE('^\\s+\\*\\*\\s*([0-9\\.]+)\\s*kb\\*\\*\\s+\\*(.+)\\*<br>\\s*$', line)))) {
+                ## We have found a size/description row
+                
+                if (is.na(registry$size[priorRow])) {
+                    ## Good, the slot is still NA
+                    registry$size[priorRow] <<- as.double(szDesc[1]) * 1000
+                } else {
+                    str(registry[[priorRow]])
+                    stop(paste("    ERROR! Attempt to reset file size in Files block!", line))
+                }
+                if (is.na(registry$desc[priorRow])) {
+                    ## Good, the slot is still NA
+                    registry$desc[priorRow] <<-szDesc[2]
+                } else {
+                    str(registry[[priorRow]])
+                    stop(paste("    ERROR! Attempt to reset description in Files block!", line))
+                }
+            } else {
+                message(paste("    Unexpected line in files block:", line))
+            }
+        }
+    }
 
     verifyRegistry <- function() {
-        failed <- NULL
         if (is.null(registry)) {
             message("Registry is empty, verification passes by default")
-            return(failed)
+            return(NULL)
         }
         ## Check each file to assure it is present and has appropriate
-        ## hash digest
+        ## hash digest. Scott believes it is faster to build a new DF
+        ## and assign it monolithically to 'registry'; Benchmarking
+        ## implies that this may be true, although marginally
         numFiles <- nrow( registry )
+        newReg   <- data.frame()
         for (i in seq_len(numFiles)) {
-            ## Get the row representing this entry:
-            entry  <- registry[i, ]
-            verify <- FALSE
-            error  <- "Error was not set during verification!"
-            path   <- entry$path
-            
-            if (!file.exists(path)) {
-                error <- "File not found"
-            } else {
-                check <- digest( file = path, algo = algo)
-                if (identical(check, entry$hash)) {
-                    verify <- TRUE
-                    error  <- ""
-                } else {
-                    error <- paste("Checksum does not match:", check)
-                }
-            }
-            registry[i, ]$verified <<- verify
-            registry[i, ]$error    <<- error
-            if (!verify) {
-                ## Add failed file rows to return value
-                if (is.null(failed)) {
-                    failed <- registry[i, ]
-                } else {
-                    failed <- rbind(failed, registry[i, ])
-                }
-            } 
+            newReg <- rbind(newReg, .verifyRow( i ));
         }
-        if (is.null(failed)) {
-            message("All files in registry have been verified")
+        ## For a return value, provide a DF of problematic rows
+        failed    <- newReg[ !newReg$verified, ]
+        registry <<- newReg
+        numFailed <- nrow(failed)
+        if (nrow(failed) == 0) {
+            ## We will return NULL if everything is OK
+            failed <- NULL
+            message("All", numFiles, "files in registry have been verified")
         } else {
-            message(paste("!!", nrow(failed)," files failed verification!"))
+            message(paste("!!", numFailed,"of", numFiles,
+                          "files failed verification!"))
         }
         failed
     }
+    
+    .verifyRow <- function( i ) {
+        ## Scott says I should break this out as a separate function.
+        ## This call will check that a file exists and has the right
+        ## hash value. First get the row representing this entry:
+        entry  <- registry[i, ]
+        verify <- FALSE
+        error  <- "Error was not set during verification!"
+        path   <- entry$path
+        
+        if (!file.exists(path)) {
+            error <- "File not found"
+        } else {
+            check <- digest( file = path, algo = algo)
+            if (identical(check, entry$hash)) {
+                verify <- TRUE
+                error  <- ""
+            } else {
+                error <- paste("Checksum does not match:", check)
+            }
+        }
+        entry["verified"] <- verify
+        entry["error"]    <- error
+        ## Return this row:
+        entry
+    }
+
+### Finally, the return value for createFileRegistry() is a list of
+### functions that will be used by the RegistryManager "object":
     
     list(addFile        = addFile,
          registryList   = registryList,
