@@ -9,6 +9,9 @@ https://d396qusza40orc.cloudfront.net/getdata%2Fprojectfiles%2FUCI%20HAR%20Datas
 The scripts used to process them may be found on
 [GitHub](https://github.com/maptracker/GettingAndCleaningData).
 
+A full registry of every file used, both input and output, can be
+found in the [File Registry](./FileRegistry.md)
+
 #### Important! ####
 
 If you are viewing [CodeBookIntroOnly.md](./CodeBookIntroOnly.md),

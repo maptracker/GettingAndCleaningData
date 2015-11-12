@@ -45,6 +45,10 @@
     regMan$param("CourseraDate", "November 2015")
     regMan$addFile( file = "run_analysis.R",
                    desc = "The R script used to process input into output")
+    regMan$addFile( file = "registryManager.R",
+                   desc = "The R script used to create this registry page")
+    regMan$addFile( file = "README.md",
+                   desc = "An introduction to the project")
     
 ### *** Functions *** ###
     
@@ -173,15 +177,32 @@
         regMan$addFile( file = full,
                        desc = "Output: Full tidy data file, including all rows from test and train sets, with selected mean and std columns")
 
+        ## dplyr operations:
+        ## Group the data by subject and activity
         bySubAct <- group_by(data, SubjectID, Activity)
+
+        ## Get the numeric columns (exclude the first three headers)
+        meanNames <- names(subAct)[ -(1:3) ]
+
+        ## Calculate counts for each grouping pair
+        bySubAct <- mutate(bySubAct, Count = n() )
+
+        ## Finally, use summarize_each() to generate the mean for each
+        ## column and each Subj/Act group. We exclude the DataSet
+        ## category which is not of interest to us at this
+        ## point. Also, Count will get mean()ed here, but that's ok
+        ## since it should be the same for all rows in a Sub/Act pair.
+        meanData <- summarize_each(bySubAct, "mean", -3)
         
-        
+        ## Write the mean data to disk:
         mf       <- "meanTidyData.tsv"
         meanPath <- file.path(mf)
-        
+        write.table(meanData, file = meanPath, sep = "\t", row.names = FALSE)
+        regMan$addFile( file = mf,
+                       desc = "Output: Mean tidy data file, with data grouped by SubjectID and Activity, and values representing the mean within each group")
+       
         list(full = fullPath,
              mean = meanPath)
-        
     }
     
     readRawData <- function( feats ) {

@@ -20,27 +20,33 @@ Coursera 'Getting and Cleaning Data' course.
 
 ## Parameters ##
 
-* **Started** : 2015-11-11 16:43:47
+* **Started** : 2015-11-12 16:47:20
 * **HashAlgorithm** : sha1
 * **CourseraURL** : https://class.coursera.org/getdata-034/human_grading/view/courses/975118/assessments/3/submissions
 * **CourseraTitle** : Getting and Cleaning Data
 * **CourseraDate** : November 2015
-* **Finished** : 2015-11-11 16:44:05
+* **Finished** : 2015-11-12 16:47:40
 
 ## Files ##
 
 1. [run_analysis.R](./run_analysis.R)<br>
-   **12.472 kb** *The R script used to process input into output*<br>
-   `eba62d58b431186f09d1b7ef381a6843dda22a7d`
+   **13.678 kb** *The R script used to process input into output*<br>
+   `49084c1ec2c83423a4eeb3de3301fd80e2b84eb1`
+1. [registryManager.R](./registryManager.R)<br>
+   **14.481 kb** *The R script used to create this registry page*<br>
+   `a4e2a5d2209ccedf2d5690c9901b776cbe1db6ce`
+1. [README.md](./README.md)<br>
+   **0.968 kb** *An introduction to the project*<br>
+   `de289dbc8197a7bf93c5a0684acf714af9787447`
 1. [features.txt](UCI HAR Dataset/features.txt)<br>
    **15.785 kb** *Input data: Column headers for raw data files*<br>
    `21679bf2275d22adc483947009ace0c73bd6f5c0`
 1. [CodeBookIntroOnly.md](./CodeBookIntroOnly.md)<br>
-   **3.275 kb** *Output template: Hand-written 'intro' for the 'top' of the Code Book*<br>
-   `21c7d0b2eaa2fbbcb5f653a131132c7497156dc7`
+   **3.390 kb** *Output template: Hand-written 'intro' for the 'top' of the Code Book*<br>
+   `45ab50db86da0385b6c356972ee4895cd2f41eb9`
 1. [CodeBook.md](./CodeBook.md)<br>
-   **660.505 kb** *Output: Code Book describing data sets, with manually written introduction and auto-generated column listing*<br>
-   `e9b2507059ab8f0b5b1cc2faafc4444682da722a`
+   **709.225 kb** *Output: Code Book describing data sets, with manually written introduction and auto-generated column listing*<br>
+   `4cdbc7b89c53f2deb7351c611b717be230d7430b`
 1. [activity_labels.txt](UCI HAR Dataset/activity_labels.txt)<br>
    **0.080 kb** *Input data: Activity factors, relating integer ID to human-readable name*<br>
    `41321617310f6897dcf18abd5f36ff294080cb7e`
@@ -65,3 +71,6 @@ Coursera 'Getting and Cleaning Data' course.
 1. [fullTidyData.tsv](./fullTidyData.tsv)<br>
    **8366.665 kb** *Output: Full tidy data file, including all rows from test and train sets, with selected mean and std columns*<br>
    `c006fb71a4a8d6f1dd076bbf980ff3e4d1e6d5cf`
+1. [meanTidyData.tsv](./meanTidyData.tsv)<br>
+   **224.928 kb** *Output: Mean tidy data file, with data grouped by SubjectID and Activity, and values representing the mean within each group*<br>
+   `dd74690a26589a42c75730a2d288633487aa3a7e`
