@@ -8,7 +8,7 @@
     ## inside the function. The very last statement to be evaluated
     ## will be returned in the source call. Just run:
 
-    ## retVal <- source("run_analysis.R")$value
+    ## data <- source("run_analysis.R")$value
 
 ### *** Some shared variables *** ###
 
@@ -40,9 +40,11 @@
     source("registryManager.R")
     regMan <- createFileRegistry( )
     regMan$setIntro("This registry describes both the input and output files used for the Coursera 'Getting and Cleaning Data' course.")
+    
     regMan$param("CourseraURL", "https://class.coursera.org/getdata-034/human_grading/view/courses/975118/assessments/3/submissions")
     regMan$param("CourseraTitle", "Getting and Cleaning Data")
     regMan$param("CourseraDate", "November 2015")
+    
     regMan$addFile( file = "run_analysis.R",
                    desc = "The R script used to process input into output")
     regMan$addFile( file = "registryManager.R",
@@ -63,12 +65,16 @@
         tidy  <- buildTidyFiles( data )
         ## Generate the file registry:
         regFile <- regMan$writeRegistry()
+        ## When sourcing is complete, the full data frame will be
+        ## returned to the user:
         data
-        # tidy
     }
 
     parseFeatures <- function() {
-        ## Find the raw columns that we are interested in
+        ## Find the raw columns that we are interested in with the
+        ## awesome power of regular expressions
+
+        ## Make sure we have the file we neeed
         file <- "features.txt"
         path <- file.path(dataDir, file)
         
@@ -84,11 +90,13 @@
         codeIntro <- "CodeBookIntroOnly.md"
         if (file.size( codeIntro )) {
             ## Initiate the code book with the intro
-            file.copy( from = codeIntro, to = codeBook )
+            file.copy( from = codeIntro, to = codeBook, overwrite = TRUE )
             regMan$addFile( file = codeIntro,
                            desc = "Output template: Hand-written 'intro' for the 'top' of the Code Book")
        } else {
             message(paste("Did not locate code book intro: ", codeIntro))
+           ## If an old file is present remove it:
+            if (file.size(codeBook)) file.remove(codeBook)
         }
         cbCon <- file( codeBook, open = "a" )
 
@@ -104,7 +112,7 @@
         feat <- read.table(path,
                            colClasses = c("integer", "character"))
         for (i in seq_len(nrow(feat))) {
-            ## Parse the metric name
+            ## Parse the metric name (function defined below)
             info <- parseFeatureName( feat[[2]][[i]] )
             ## Skip if it is not of interest
             if (!length(info)) next
@@ -132,6 +140,37 @@
         message(sprintf("%d columns captured from %s", nrow(rv), path))
         message(sprintf("  Code Book written to %s", codeBook))
         rv
+    }
+
+    parseFeatureName <- function( fname ) {
+        ## I do not like the parens or commas, so remove them. eg:
+        ## tBodyAcc-arCoeff()-Z,4  ---> tBodyAcc-arCoeff-Z4
+
+        cleaned <- gsub("[\\(\\),]", "", fname)
+        
+        ## Split on dashes:
+        parts <- strsplit(cleaned, '-')[[1]]
+        nice <- parts[1]
+        type <- parts[2]
+        
+        ## If the type is not something we want, return an empty list
+        if (! type %in% desiredParameters ) return( nullList )
+
+        nameSep <- '_'
+        ## NOTE: Using dash (-) as a separator seems to cause problems
+        ## with dplyr, because when using "naked" column names it is
+        ## treated as a subtraction operator.
+        
+        plen <- length(parts)
+        if (plen > 2) {
+            ## If we have more than two "parts", stick the remainder onto nice
+            for (i in seq(from = 3, to = plen)) {
+                nice <- paste(nice, parts[[i]], sep = nameSep)
+            }
+        }
+        ## Return the nice name, its type, and the original column name
+        data.frame( metric = nice, type = type, original = fname,
+             full = paste(nice, type, sep = nameSep), stringsAsFactors = FALSE)
     }
 
     activityLookup <- function() {
@@ -171,11 +210,13 @@
     }
 
     buildTidyFiles <- function( data ) {
-        full     <- "fullTidyData.tsv"
+        ## Generate the desired tidy files given the merged data file
+        full     <- "SamsungHumanActivity_Full.tsv"
         fullPath <- file.path(full)
         write.table(data, file = fullPath, sep = "\t", row.names = FALSE)
         regMan$addFile( file = full,
                        desc = "Output: Full tidy data file, including all rows from test and train sets, with selected mean and std columns")
+        message(paste("Full data set written:", fullPath))
 
         ## dplyr operations:
         ## Group the data by subject and activity
@@ -193,22 +234,26 @@
         ## point. Also, Count will get mean()ed here, but that's ok
         ## since it should be the same for all rows in a Sub/Act pair.
         meanData <- summarize_each(bySubAct, "mean", -3)
+
+        ## I want the count column "at the front":
+        meanData <- ungroup(meanData)
+        meanData <- meanData[ c("SubjectID", "Activity", "Count", meanNames) ]
         
         ## Write the mean data to disk:
-        mf       <- "meanTidyData.tsv"
+        mf       <- "SamsungHumanActivity_Means.tsv"
         meanPath <- file.path(mf)
         write.table(meanData, file = meanPath, sep = "\t", row.names = FALSE)
         regMan$addFile( file = mf,
                        desc = "Output: Mean tidy data file, with data grouped by SubjectID and Activity, and values representing the mean within each group")
-       
+        message(paste("Mean data set written:", meanPath))
+        
         list(full = fullPath,
              mean = meanPath)
     }
     
     readRawData <- function( feats ) {
-        ## Get the activity lookup
+        ## Get the activity lookup (used to map factor number to name):
         actLU <- activityLookup()
-        fooDebug <<- actLU
         myFrames <- list()
 
         message("Reading and merging kinematic data...")
@@ -286,38 +331,7 @@
         fullData
     }
 
-    parseFeatureName <- function( fname ) {
-        ## I do not like the parens or commas, so remove them. eg:
-        ## tBodyAcc-arCoeff()-Z,4  ---> tBodyAcc-arCoeff-Z4
-
-        cleaned <- gsub("[\\(\\),]", "", fname)
-        
-        ## Split on dashes:
-        parts <- strsplit(cleaned, '-')[[1]]
-        nice <- parts[1]
-        type <- parts[2]
-        
-        ## If the type is not something we want, return an empty list
-        if (! type %in% desiredParameters ) return( nullList )
-
-        nameSep <- '_'
-        ## NOTE: Using dash (-) as a separator seems to cause problems
-        ## with dplyr, because when using "naked" column names it is
-        ## treated as a subtraction operator.
-        
-        plen <- length(parts)
-        if (plen > 2) {
-            ## If we have more than two "parts", stick the remainder onto nice
-            for (i in seq(from = 3, to = plen)) {
-                nice <- paste(nice, parts[[i]], sep = nameSep)
-            }
-        }
-        ## Return the nice name, its type, and the original column name
-        data.frame( metric = nice, type = type, original = fname,
-             full = paste(nice, type, sep = nameSep), stringsAsFactors = FALSE)
-    }
-
-### *** Run the code, return final value *** ###
+### *** Run the code, return final value (the full data.frame) *** ###
     run() 
     
 })()

@@ -13,7 +13,23 @@ Jorge L. Reyes-Ortiz*.
 **International Workshop of Ambient Assisted Living** (IWAAL 2012).
 Vitoria-Gasteiz, Spain. Dec 2012
 
+The data represent smartphone accelerometer measurements recorded with
+6 distinct activities; WALKING, WALKING_UPSTAIRS, WALKING_DOWNSTAIRS,
+SITTING, STANDING, LAYING. Two tidy data files were created by
+extracting columns associated with mean and standard deviation.
 
+* [SamsungHumanActivity_Full.tsv](./SamsungHumanActivity_Full.tsv) -
+  All measurements for selected columns
+* [SamsungHumanActivity_Means.tsv](./SamsungHumanActivity_Means.tsv) -
+  The above data grouped by the subject and their activity, with all
+  measurements in each group averaged.
+
+All files used as input, script or output are captured in the
+[File Registry](./FileRegistry.md). Of particular note:
+
+* [CodeBook.md](./CodeBook.md) - A code book describing all variables
+* [run_analysis.R](./run_analysis.R) - The script used to process the
+  files.
 
 [DataSource]: http://www.icephd.org/sites/default/files/IWAAL2012.pdf
 [ProjectPage]: https://class.coursera.org/getdata-034/human_grading/view/courses/975118/assessments/3/submissions
