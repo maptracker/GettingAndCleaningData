@@ -28,7 +28,7 @@ the variables.
 
 All files are contained in the top-level directory
 [UCI HAR Dataset](./UCI HAR Dataset) from the zip
-archive. "<test|train>" indicates that the file had either "test" or
+archive. `<test|train>` indicates that the file had either "test" or
 "train" at that position, depending on the source directory.
 
 The file `features.txt` contains column header information for

@@ -20,12 +20,12 @@ Coursera 'Getting and Cleaning Data' course.
 
 ## Parameters ##
 
-* **Started** : 2015-11-13 08:58:17
+* **Started** : 2015-11-13 09:12:21
 * **HashAlgorithm** : sha1
 * **CourseraURL** : https://class.coursera.org/getdata-034/human_grading/view/courses/975118/assessments/3/submissions
 * **CourseraTitle** : Getting and Cleaning Data
 * **CourseraDate** : November 2015
-* **Finished** : 2015-11-13 08:58:36
+* **Finished** : 2015-11-13 09:12:40
 
 ## Files ##
 
@@ -43,10 +43,10 @@ Coursera 'Getting and Cleaning Data' course.
    `21679bf2275d22adc483947009ace0c73bd6f5c0`
 1. [CodeBookIntroOnly.md](./CodeBookIntroOnly.md)<br>
    **4.100 kb** *Output template: Hand-written 'intro' for the 'top' of the Code Book*<br>
-   `dc7404ee65242e10a02e48dd03df3c54e1c38730`
+   `f5e4a35334f253cbcad3f30b64aebdd33f21d210`
 1. [CodeBook.md](./CodeBook.md)<br>
    **16.280 kb** *Output: Code Book describing data sets, with manually written introduction and auto-generated column listing*<br>
-   `63ddd1058625663a34932d134b2895548537654e`
+   `49e066270e5be7bb1baffd9561b2aca8137bdfb1`
 1. [activity_labels.txt](UCI HAR Dataset/activity_labels.txt)<br>
    **0.080 kb** *Input data: Activity factors, relating integer ID to human-readable name*<br>
    `41321617310f6897dcf18abd5f36ff294080cb7e`
